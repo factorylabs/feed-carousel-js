@@ -28,6 +28,11 @@
       width: 128px;
     }
 
+    #feedCarouselContainer #navFilter li a span {
+      color: #fff;
+      font-weight: bold;
+    }
+
     #feedCarouselContainer #navFilter li a.current {
       color: #fff;
     }
@@ -45,7 +50,7 @@
         text-indent: -9999px;
       }
 
-    #feedCarouselContainer #navFilter li a.blogFilter {
+    #feedCarouselContainer #navFilter li a.blogsFilter {
       border-bottom: 5px solid #fa6101;
     }
 
