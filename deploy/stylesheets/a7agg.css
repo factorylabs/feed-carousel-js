@@ -1,0 +1,66 @@
+#feedCarouselContainer {
+  width: 975px;
+  height: 125px;
+  padding-top: 10px;
+  background: #a6a9b0;
+  font-family: sans-serif;
+  font-size: 10px;
+}
+
+#feedCarouselContainer #navFilter {
+  margin: 0;
+  padding: 0 0 0 125px;
+  list-style-type: none;
+  height: 22px;
+}
+  #feedCarouselContainer #navFilter li {
+    margin: 5px 0 0 0;
+    padding: 0;
+    list-style-type: none;
+    float: left;
+    overflow:hidden;
+  }
+    #feedCarouselContainer #navFilter li a {
+      display: block;
+      overflow: hidden;
+      color: #333;
+      height: 17px;
+      width: 128px;
+    }
+
+    #feedCarouselContainer #navFilter li a.current {
+      color: #fff;
+    }
+
+    #feedCarouselContainer #navFilter li a:hover {
+      color: #fff;
+    }
+
+    #feedCarouselContainer #navFilter li a.showAllFilter {
+      text-indent: 0px;
+      border-bottom: 5px solid #575556;
+    }
+
+      #feedCarouselContainer #navFilter li a.showAllFilter.current {
+        text-indent: -9999px;
+      }
+
+    #feedCarouselContainer #navFilter li a.blogFilter {
+      border-bottom: 5px solid #fa6101;
+    }
+
+    #feedCarouselContainer #navFilter li a.twitterFilter {
+      border-bottom: 5px solid #01c5f7;
+    }
+
+    #feedCarouselContainer #navFilter li a.youtubeFilter {
+      border-bottom: 5px solid #b42006;
+    }
+
+    #feedCarouselContainer #navFilter li a.flickrFilter {
+      border-bottom: 5px solid #2861ba;
+    }
+
+  #feedCarouselContainer #navFilter li a {
+    text-decoration: none;
+  }
