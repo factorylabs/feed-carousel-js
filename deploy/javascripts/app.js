@@ -105,10 +105,11 @@ JCarousel.utils = {
     }
  
     this.lockCarousel(true);
-    //TODO set this url as currentFilters href attr, return false 
-    //console.log(JCarousel.currentFilter.getAttribute('href'));
 
-    jQuery.ajax('javascripts/json-ajax', {
+    //TODO set this url as currentFilters href attr, return false 
+    console.log(JCarousel.currentFilter.getAttribute('href'));
+
+    jQuery.ajax('javascripts/json-ajax-empty', {
  
       'cache': false,
  
@@ -119,8 +120,13 @@ JCarousel.utils = {
       },
  
       'success': function (data, textStatus, jqXHR) {
-        self.lockCarousel(false);
-        params.callback(data);
+
+        if (!data || typeof data.items !== undefined) {
+          return false;
+        } else if (data && data.items && data.items.length > 0) {
+          self.lockCarousel(false);
+          params.callback(data);
+        }
  
       },
  
@@ -143,7 +149,8 @@ JCarousel.filters = {
       jQuery(JCarousel.currentFilter).parent().width(10);
  
       jQuery('.showAllFilter, .twitterFilter, .youtubeFilter, .flickrFilter, .blogsFilter', filterContainerId).click(function ()  {
- 
+          //TODO - make sure current element gets to JSON request 
+        
           var self = this;
  
           JCarousel.utils.getJSON({
