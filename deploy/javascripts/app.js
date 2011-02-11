@@ -1,30 +1,100 @@
-var JCarousel = JCarousel || {};
+var FeedCarousel = function (carouselId, seedObj) {
+
+  //Private  
+  var _self = this,
+      _carouselObj,
+      _carouselId = carouselId,
+      _carouselWrapperElm = jQuery(_carouselId)[0],
+      _seedJSON = seedObj,
+      _init;
+
+  //Public
+  this.animationSpeed = 200;
+  this.ajaxURL = false;
+  this.scrollSpeed = 3;
+
+  this.getCarouselId = function () {
+    return _carouselId;
+  };
+
+  this.getCarouselElm = function () {
+    return _carouselWrapperElm;
+  };
+
+  this.getCarouselObj = function () {
+    return _carouselObj;
+  };
+
+  this.getSeedJSON = function () {
+    return _seedJSON;
+  };
+
+  //Initialize
+  _init = (function () {
+
+
+    jQuery(_carouselId).jcarousel({
+        auto: _self.scrollSpeed,
  
-//Protect this
-JCarousel.self = null;
-JCarousel.currentFilter = null;
-JCarousel.animationSpeed = 200;
+        //Init size
+        size: 0,
  
-JCarousel.utils = {
+        animation: 'slow',
  
+        itemLastInCallback: function (carousel, currListElm, index, state) {
+          if (!_self.ajaxURL) {
+
+            return false;
+
+          } else {
+
+            if (index + carousel.options.scroll >= carousel.options.size ) {
+              _self.getJSON({
+                'callback': function (filteredJSON) {
+                    _self.populateCarousel({
+                      'additive': true,
+                      'objList': filteredJSON 
+                    });
+                }, 
+                'additive': true
+              });
+            }
+
+          }
+        },
+ 
+        initCallback: function (carousel, state) { 
+          if (state === 'init') {
+            _carouselObj =  carousel;
+            _self.populateCarousel({ 'objList': seedObj});
+          }
+        }
+    });
+
+  })();
+
+};
+
+FeedCarousel.prototype = {
+
   populateCarousel: function (params) {
-    for (var i = 0; i < params.objList.items.length; i++) {
+    var carouselObj = this.getCarouselObj();
+
+    for (var i = 0; i < params.objList.items.length; i+=1) {
       this.addItem({
           'objListIndex': i,  
           'objList': params.objList.items, 
-          'carouselIndex':( params.additive ? JCarousel.self.options.size + i : i + 1 )
+          'carouselIndex':( params.additive ? carouselObj.options.size + i : i + 1 )
       });
     }
  
     //Update carousel size
-    JCarousel.self.options.size +=  i;
+    carouselObj.options.size +=  i;
   },
  
   addItem: function (params) {
     var currentItemObject = params.objList[params.objListIndex],
-        currentListItem = JCarousel.self.add( params.carouselIndex, this.getItemHTML( currentItemObject ));
- 
-    return currentListItem;
+        currentListItem = this.getCarouselObj().add( params.carouselIndex, this.getItemHTML( currentItemObject ));
   },
  
   getItemHTML: function (item) {
@@ -39,49 +109,54 @@ JCarousel.utils = {
   },
  
   getStagedItems: function () {
-    var firstIndex = JCarousel.self.first,
-        scrollInt = JCarousel.self.options.scroll,
+    var carouselObj= this.getCarouselObj(),
+        onStage = carouselObj.options.scroll,
+        firstStaged = carouselObj.first,
+        lastStaged = firstStaged + onStage,
+        count = firstStaged,
         stagedItems = [];
  
-      for (var i = firstIndex; i < firstIndex + scrollInt; i++) {
-        stagedItems.push(JCarousel.self.get(i)[0]);
+      for (count; count < lastStaged; count+=1) {
+        stagedItems.push(carouselObj.get(count)[0]);
       }
- 
+
       return stagedItems;
   },
  
   transitionNewItems: function (params) {
-    jQuery(this.getStagedItems()).each(function (i){
- 
-      //Account for 0 based loop, when indexing for jcarousel - which starts at 1
-      i+=1;
- 
-      jQuery('div:first', this)
+    var count = 0,
+        self = this,
+        stagedItems = this.getStagedItems();
+
+    for (count; count < stagedItems.length; count+=1) {
+      jQuery('div:first', stagedItems[count])
         .css(params.css)
         .animate(
             params.animation, 
-            JCarousel.animationSpeed * i, 
+            self.animationSpeed * (count + 1), 
             (function (itemIndex) { 
               if (params.callback) { 
                 return function () { params.callback(itemIndex); } 
               }
-            })(i)
+            })(count)
         );
-    });
+    }
   },
  
   reloadCarousel: function (filteredJSON) {
-    JCarousel.self.reset();
+    var carouselObj = this.getCarouselObj();
+
+    carouselObj.reset();
  
-    JCarousel.self.options.size = 0; 
+    carouselObj.options.size = 0; 
  
-    JCarousel.utils.populateCarousel({
+    this.populateCarousel({
       'filter': true,
       'objList': filteredJSON 
     });
  
-    JCarousel.utils.transitionNewItems({
-      'css': {'position': 'relative', 'top': -jQuery(JCarousel.self.get(1)).height() - 10, 'opacity': 0},
+    this.transitionNewItems({
+      'css': {'position': 'relative', 'top': -jQuery(carouselObj.get(1)).height() - 10, 'opacity': 0},
       'animation': {'top': 0, 'opacity': 1}
     });
  
@@ -89,27 +164,19 @@ JCarousel.utils = {
  
   lockCarousel: function (b) { 
   },
- 
+
   getJSON: function (params) {
-     var filteredJSON, 
-         self = this;
+    var carouselObj = this.getCarouselObj(),
+        filteredJSON, 
+        self = this;
  
-    //Double click
-    if(jQuery(params.filterElm).hasClass('current') && !params.additive) {
-      return false;
-    }
- 
-    //Started again when content reloaded
-    if (!params.additive) {
-      JCarousel.self.pauseAuto(); 
-    }
+    //Started again in success only when additive, otherwise  when content reloaded
+    //TODO: Update URL when additive with timestamp
+    carouselObj.pauseAuto(); 
  
     this.lockCarousel(true);
 
-    //TODO set this url as currentFilters href attr, return false 
-    console.log(JCarousel.currentFilter.getAttribute('href'));
-
-    jQuery.ajax('javascripts/json-ajax-empty', {
+    jQuery.ajax(this.ajaxURL, {
  
       'cache': false,
  
@@ -120,14 +187,20 @@ JCarousel.utils = {
       },
  
       'success': function (data, textStatus, jqXHR) {
+        if (!data || typeof data.items === undefined) {
 
-        if (!data || typeof data.items !== undefined) {
           return false;
+
         } else if (data && data.items && data.items.length > 0) {
+
           self.lockCarousel(false);
+
           params.callback(data);
+
+          if (params.additive) {
+            carouselObj.startAuto();
+          }
         }
- 
       },
  
       'timeout': 5000
@@ -135,58 +208,118 @@ JCarousel.utils = {
     });
  
   }
- 
- 
 };
+
+
  
-JCarousel.filters = {
- 
-  init: function (initialJSON, filterContainerId) {
- 
-      JCarousel.currentFilter = jQuery('.current', filterContainerId)[0];
+var CarouselFilters = function (feedCarouselObj, filterClasses, filterContainerId) {
+  var _self = this,
+      _currentFilter,
+      _filters,
+      _filtersWrapper,
+      _feedCarouselObj = feedCarouselObj,
+      _init;
+
+  this.getCurrentFilter = function () {
+    return _currentFilter;
+  };
+
+  this.getAllFilters = function () {
+    return _filters;
+  };
+
+  this.getFiltersWrapper = function () {
+    return _filtersWrapper;
+  };
+
+  this.getFeedCarouselObj = function () {
+    return _feedCarouselObj;
+  };
+
+  this.getCurrentFilter = function () {
+    return _currentFilter;
+  };
+
+  this.setCurrentFilter = function (filterElm) {
+    _currentFilter = filterElm; 
+  };
+
+  _init = (function () {
+      _filtersWrapper = jQuery(filterContainerId), 
+      _filters = jQuery(filterClasses, _filtersWrapper);
+      
+      _self.setCurrentFilter(jQuery('.current', _filtersWrapper)[0]);
 
       //Cosmetic initializaiton of select all filter on parent li
-      jQuery(JCarousel.currentFilter).parent().width(10);
+      //jQuery(_currentFilter).parent().width(10);
  
-      jQuery('.showAllFilter, .twitterFilter, .youtubeFilter, .flickrFilter, .blogsFilter', filterContainerId).click(function ()  {
-          //TODO - make sure current element gets to JSON request 
-        
-          var self = this;
- 
-          JCarousel.utils.getJSON({
-            'filterElm': this, 
- 
-            'callback': function (filteredJSON) {
- 
-              JCarousel.utils.transitionNewItems({
-                'css': {'position': 'relative'},
-                'animation': {'top': 200},
-                'callback': function (itemIndex) {
-                    if (itemIndex === 1) {
-                      JCarousel.utils.reloadCarousel(filteredJSON);
-                    }
-                }            
-              });
- 
-              JCarousel.filters.collapseNav(self);
-            }
-          });
+      _self.setupFilters();
 
-          return false;
+      jQuery(_filters).click(function ()  {
+
+          if (this === _self.getCurrentFilter()) {
+            return false; 
+          } else {
+            _self.filterAction(this);
+            return false;
+          }
       
       });
 
-      this.setupFilters(initialJSON, filterContainerId);
- 
+  })();
+};
+
+CarouselFilters.prototype = {  
+
+  filterAction: function (filterElm) {
+    var self = this,
+        feedCarouselObj = this.getFeedCarouselObj();
+
+    //TODO: REMOVE WHEN LIVE URLS
+    //feedCarouselObj.ajaxURL = jQuery(filterElm).attr('href');
+  
+    feedCarouselObj.getJSON({
+      'callback': function (filteredJSON) {
+
+        feedCarouselObj.transitionNewItems({
+          'css': {'position': 'relative'},
+          'animation': {'top': 200},
+          'callback': function (itemIndex) {
+              if (itemIndex === 1) {
+                feedCarouselObj.reloadCarousel(filteredJSON);
+              }
+          }            
+
+        });
+
+        self.collapseNav(filterElm);
+
+      }
+    });
   },
 
-  setupFilters: function (initialJSON, filterContainerId) {
+  collapseNav: function (filterElm) {
+      var showAllFilter = this.getFiltersWrapper().find('a:first'),
+          allFilters = this.getAllFilters(),
+          allTypeFiltersButSelf = this.getAllFilters().not(filterElm).not(showAllFilter),
+          showAllWidth = showAllFilter[0] === filterElm ? 10 : 128,
+          allButShowAllWidth = showAllFilter[0] === filterElm ? 128 : 0;
 
-    var filterCount,
+      allFilters.removeClass('current');
+      jQuery(filterElm).addClass('current');
+      allTypeFiltersButSelf.parent().animate({'width': allButShowAllWidth});
+      showAllFilter.parent().animate({'width': showAllWidth});
+ 
+      this.setCurrentFilter(filterElm); 
+  },
+
+  setupFilters: function () {
+    var initialJSON = this.getFeedCarouselObj().getSeedJSON(),
+        filterCount = 0,
         filterClassName,
-        allFilters = jQuery(filterContainerId).find('a');
+        allFilters = this.getAllFilters();
 
-        for(filterCount = 0; filterCount < allFilters.length; filterCount+=1) {
+        for(filterCount; filterCount < allFilters.length; filterCount+=1) {
           filterClassName = allFilters[filterCount].className.match(/\w+Filter/)[0].split('Filter')[0];
           this.setFilterHTML(initialJSON.sources[filterClassName], allFilters[filterCount]);
         }
@@ -195,59 +328,14 @@ JCarousel.filters = {
 
   setFilterHTML: function (filterDataObj, filterElm) {
     jQuery(filterElm).attr({'href': filterDataObj.get_more_items_url}).html(filterDataObj.title + ' <span>' + filterDataObj.total_items + '</span>');
-  },
- 
-  collapseNav: function (filterElm) {
-      var showAllFilter = jQuery(filterElm).parents('ul').find('a:first'),
-          allTypeFiltersButSelf = jQuery(filterElm).parents('ul').find('li:not(:first)').find('a').not(filterElm),
-          allFilters = jQuery(filterElm).parents('ul').find('a'),
-          showAllWidth = showAllFilter[0] === filterElm ? 10 : 128,
-          allButShowAllWidth = showAllFilter[0] === filterElm ? 128 : 0;
- 
-      allFilters.removeClass('current');
-      jQuery(filterElm).addClass('current');
-      allTypeFiltersButSelf.parent().animate({'width': allButShowAllWidth});
-      showAllFilter.parent().animate({'width': showAllWidth});
- 
-      JCarousel.currentFilter = filterElm; 
   }
 };
  
- 
-jQuery(document).ready(function() {
-    jQuery('#feedCarousel').jcarousel({
-        auto: 10,
- 
-        //Init size
-        size: 0,
- 
-        animation: 'slow',
- 
-        itemLastInCallback: function (carousel, currListElm, index, state) {
 
-          if (index + carousel.options.scroll >= carousel.options.size ) {
-            //Only add new if we have them - switch to check if we need to load items
-            JCarousel.utils.getJSON({
-              'filterElm': JCarousel.currentFilter, 
-              'callback': function (filteredJSON) {
-                  JCarousel.utils.populateCarousel({
-                    'additive': true,
-                    'objList': filteredJSON 
-                  });
-              }, 
-              'additive': true
-            });
-          }
-        },
- 
-        initCallback: function (carousel, state) { 
-          if (state === 'init') {
-            JCarousel.self =  carousel;
+$(document).ready(function (){
+  var feed_carousel = new FeedCarousel('#feedCarousel', social_data);
+  feed_carousel.ajaxURL = 'javascripts/json-ajax';
 
-            JCarousel.utils.populateCarousel({ 'objList': social_data });
- 
-            JCarousel.filters.init(social_data, '#navFilter'); 
-          }
-        }
-    });
+  var carousel_filters = new CarouselFilters(feed_carousel, '.showAllFilter, .twitterFilter, .youtubeFilter, .flickrFilter, .blogsFilter', '#navFilter');
+  
 });
