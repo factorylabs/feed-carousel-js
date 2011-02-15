@@ -6,11 +6,11 @@ var FeedCarousel = function (carouselId, seedObj) {
       _carouselId = carouselId,
       _carouselWrapperElm = jQuery(_carouselId)[0],
       _seedJSON = seedObj,
+      _ajaxURL = false,
       _init;
 
   //Public
   this.animationSpeed = 200;
-  this.ajaxURL = false;
   this.scrollSpeed = 3;
 
   this.getCarouselId = function () {
@@ -29,6 +29,14 @@ var FeedCarousel = function (carouselId, seedObj) {
     return _seedJSON;
   };
 
+  this.setAjaxURL = function (url) {
+    _ajaxURL = url;
+  };
+
+  this.getAjaxURL = function () {
+    return _ajaxURL;
+  };
+
   //Initialize
   _init = (function () {
 
@@ -41,13 +49,16 @@ var FeedCarousel = function (carouselId, seedObj) {
         animation: 'slow',
  
         itemLastInCallback: function (carousel, currListElm, index, state) {
-          if (!_self.ajaxURL) {
+          if (!_self.getAjaxURL()) {
 
             return false;
 
           } else {
 
             if (index + carousel.options.scroll >= carousel.options.size) {
+              // TODO
+              // console.log(carousel.get(carousel.options.size)[0]);
+              // Get last carousel object, and get data unix, append to url
               _self.getJSON({
                 'callback': function (filteredJSON) {
                               _self.populateCarousel({
@@ -100,7 +111,7 @@ FeedCarousel.prototype = {
  
   getItemHTML: function (item) {
     var img = item.image, 
-        html = '<div>';
+        html = '<div data-ajax-offset="' + item.timestamp + '">';
     
     html += (img) ? '<a href="' + item.url + '" title="' + item.title + '" class="item-image-link"><img src="' + item.image + '" width="50" height="50" alt="' + item.title + '" /></a>' : '';   
     html += '<div><p>' + item.content + '<a href="' + item.url + '" title="Read More">More</a></p></div>';
@@ -178,7 +189,7 @@ FeedCarousel.prototype = {
  
     this.lockCarousel(true);
 
-    jQuery.ajax(this.ajaxURL, {
+    jQuery.ajax(this.getAjaxURL(), {
  
       'cache': false,
  

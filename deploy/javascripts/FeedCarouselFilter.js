@@ -32,14 +32,18 @@ var FeedCarouselFilters = function (feedCarouselObj, filterClasses, filterContai
 
   _init = (function () {
     _filtersWrapper = jQuery(filterContainerId), 
-    _filters = jQuery(filterClasses, _filtersWrapper);
+    _filters = jQuery(filterClasses, _filtersWrapper),
+    _feedCarouselObj = _self.getFeedCarouselObj();
       
+    _self.setupFilters();
+
     _self.setCurrentFilter(jQuery('.current', _filtersWrapper)[0]);
 
-    //Cosmetic initializaiton of select all filter on parent li
-    //jQuery(_currentFilter).parent().width(10);
+    _feedCarouselObj.setAjaxURL(_self.getCurrentFilter().getAttribute('href'));
 
-    _self.setupFilters();
+    //Cosmetic initializaiton of select all filter on parent li
+    // TODO Temporary
+    jQuery(_currentFilter).parent().width(10);
 
     jQuery(_filters).click(function ()  {
 
@@ -62,8 +66,7 @@ FeedCarouselFilters.prototype = {
     var self = this,
         feedCarouselObj = this.getFeedCarouselObj();
 
-    //TODO: REMOVE WHEN LIVE URLS
-    //feedCarouselObj.ajaxURL = jQuery(filterElm).attr('href');
+    feedCarouselObj.setAjaxURL(filterElm.getAttribute('href'));
   
     feedCarouselObj.getJSON({
       'callback': function (filteredJSON) {
@@ -81,6 +84,8 @@ FeedCarouselFilters.prototype = {
 
         self.collapseNav(filterElm);
 
+        self.setCurrentFilter(filterElm); 
+
       }
     });
   },
@@ -96,8 +101,6 @@ FeedCarouselFilters.prototype = {
       jQuery(filterElm).addClass('current');
       allTypeFiltersButSelf.parent().animate({'width': allButShowAllWidth});
       showAllFilter.parent().animate({'width': showAllWidth});
- 
-      this.setCurrentFilter(filterElm); 
   },
 
   setupFilters: function () {
